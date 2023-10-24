@@ -1,0 +1,22 @@
+{
+  "name": "brubeck-bridge",
+  "version": "0.0.1",
+  "description": "Bridges raw data from Brubeck network to Streamr 1.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node-fetch": "^2.6.7",
+    "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "streamr-client-brubeck": "npm:streamr-client@^8.5.5",
+    "streamr-client-tatum": "npm:streamr-client@^0.0.1-tatum.6",
+    "streamr-protocol-brubeck": "npm:@streamr/protocol@^8.5.5",
+    "streamr-protocol-tatum": "npm:@streamr/protocol@^0.0.1-tatum.6"
+  }
+}
