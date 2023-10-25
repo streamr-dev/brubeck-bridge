@@ -1,16 +1,15 @@
 import fetch from 'node-fetch'
-import StreamrClientBrubeck, { StreamMessage as StreamMessageBrubeck, StreamPartID } from 'streamr-client-brubeck'
-import StreamrClientTatum from 'streamr-client-tatum'
-import { StreamMessage, EncryptedGroupKey } from 'streamr-protocol-tatum'
+import StreamrClient, { StreamMessage, StreamPartID } from 'streamr-client'
 import crypto from 'crypto'
+import ipc from 'node-ipc'
+import { MessageBetweenInstances, Message } from '../common/messageTypes'
 
-const BRIDGE_NODES = 10
-const MY_INDEX = 0
-const CHECK_INTERVAL = 15*1000
+const BRIDGE_NODES = parseInt(process.env['BRIDGE_NODES'] || '10')
+const MY_INDEX = parseInt(process.env['BRIDGE_MY_INDEX'] || '0')
+const CHECK_INTERVAL = parseInt(process.env['BRIDGE_TRACKER_INTERVAL'] || '15000')
 
-const HEX_REGEX = /^[0-9a-fA-F]+$/;
-
-
+ipc.config.id = `brubeck-${MY_INDEX}`
+ipc.config.retry = 1500
 
 const trackerUrls = [
     'https://brubeck3.streamr.network:30401',
@@ -24,59 +23,6 @@ const trackerUrls = [
     'https://brubeck4.streamr.network:30404',
     'https://brubeck4.streamr.network:30405',
 ]
-
-const TATUM_CLIENT_OPTIONS = {
-    metrics: false,
-    /*auth: {
-        privateKey: 'NODE_PRIVATE_KEY'
-    },*/
-    network: {
-        controlLayer: {
-            entryPoints: [
-                {
-                    id: 'e1',
-                    websocket: {
-                        host: 'entrypoint-1.streamr.network',
-                        port: 40401,
-                        tls: true
-                    }
-                },
-                {
-                    id: 'e2',
-                    websocket: {
-                        host: 'entrypoint-2.streamr.network',
-                        port: 40401,
-                        tls: true
-                    }
-                }
-            ]
-        }
-    },
-    contracts: {
-        streamRegistryChainAddress: '0x4F0779292bd0aB33B9EBC1DBE8e0868f3940E3F2',
-        streamStorageRegistryChainAddress: '0xA5a2298c9b48C08DaBF5D76727620d898FD2BEc1',
-        storageNodeRegistryChainAddress: '0xE6D449A7Ef200C0e50418c56F84079B9fe625199',
-        mainChainRPCs: {
-            name: 'mumbai',
-            chainId: 80001,
-            rpcs: [
-                {
-                    url: 'https://rpc-mumbai.maticvigil.com'
-                }
-            ]
-        },
-        streamRegistryChainRPCs: {
-            name: 'mumbai',
-            chainId: 80001,
-            rpcs: [
-                {
-                    url: 'https://rpc-mumbai.maticvigil.com'
-                }
-            ]
-        },
-        theGraphUrl: 'https://api.thegraph.com/subgraphs/name/samt1803/network-subgraphs'
-    }
-}
 
 type Topologies = {
     [streamPartition: string]: {
@@ -128,35 +74,69 @@ StreamMessage {
 }
  */
 ;(async () => {
-    const streamrBrubeck = new StreamrClientBrubeck()
-    await streamrBrubeck.connect()
-
-    const streamrTatum = new StreamrClientTatum(TATUM_CLIENT_OPTIONS)
-    await streamrTatum.connect()
-
-    const brubeckNode = await streamrBrubeck.getNode()
-    const tatumNode = await streamrTatum.getNode()
+    const streamr = new StreamrClient()
+    await streamr.connect()
+    const node = await streamr.getNode()
 
     let currentSubscriptions: Set<string> = new Set()
 
-    const bridgeMessage = async (brubeckMsg: StreamMessageBrubeck) => {
-        const msg: StreamMessage = new StreamMessage({
-            messageId: brubeckMsg.messageId,
-            prevMsgRef: brubeckMsg.prevMsgRef,
-            content: HEX_REGEX.test(brubeckMsg.serializedContent) ? Buffer.from(brubeckMsg.serializedContent, 'hex') : Buffer.from(brubeckMsg.serializedContent, 'utf8'),
-            messageType: brubeckMsg.messageType,
-            contentType: brubeckMsg.contentType,
-            encryptionType: brubeckMsg.encryptionType,
-            groupKeyId: brubeckMsg.groupKeyId,
-            newGroupKey: brubeckMsg.newGroupKey ? new EncryptedGroupKey(brubeckMsg.newGroupKey.groupKeyId, Buffer.from(brubeckMsg.newGroupKey.encryptedGroupKeyHex, 'hex')) : null,
-            signature: Buffer.from(brubeckMsg.signature.substring(2), 'hex') // remove '0x'
-        })
+    // Connect to tatum-publisher over local unix socket
+    const socketName = `tatum-${MY_INDEX}`
+    let socketConnected = false
+    ipc.connectTo(
+        socketName,
+        function () {
+            ipc.of[socketName].on(
+                'connect',
+                function() {
+                    socketConnected = true
+                    console.log(`Connected to ${socketName}`)
+                }
+            )
+            ipc.of[socketName].on(
+                'disconnect',
+                function() {
+                    socketConnected = false
+                    console.log(`Disconnected from ${socketName}`)
+                }
+            )
+        }
+    )
 
-        //await tatumNode.broadcast(msg)
-        console.log(brubeckMsg)
+    const bridgeMessage = async (msg: StreamMessage) => {
+        const serialized: MessageBetweenInstances = {
+            msg: {
+                messageId: {
+                    streamId: msg.messageId.streamId,
+                    streamPartition: msg.messageId.streamPartition,
+                    timestamp: msg.messageId.timestamp,
+                    sequenceNumber: msg.messageId.sequenceNumber,
+                    publisherId: msg.messageId.publisherId,
+                    msgChainId: msg.messageId.msgChainId,
+                },
+                prevMsgRef: msg.prevMsgRef ? { 
+                    timestamp: msg.prevMsgRef.timestamp, 
+                    sequenceNumber: msg.prevMsgRef.sequenceNumber,
+                } : null,
+                messageType: msg.messageType,
+                contentType: msg.contentType,
+                encryptionType: msg.encryptionType,
+                groupKeyId: msg.groupKeyId,
+                newGroupKey: msg.newGroupKey ? msg.newGroupKey.serialize() : null,
+                signature: msg.signature,
+                serializedContent: msg.serializedContent,                
+            }
+        }
+        if (socketConnected) {
+            ipc.of[socketName].emit(
+                'message',
+                JSON.stringify(serialized)
+            )
+        }
+        console.log(msg)
     }
 
-    brubeckNode.addMessageListener(bridgeMessage)
+    node.addMessageListener(bridgeMessage)
 
     // TODO: I will always be in the topology of each subscribed stream, so the set will never actually be reduced
     const updateSubscriptions = async () => {
@@ -170,27 +150,33 @@ StreamMessage {
         // Unsubscribe all subscriptions which are subscribed but are not in the target set
         for (const streamPart of currentSubscriptions) {
             if (!targetSubscriptions.has(streamPart)) {
-                //console.log(`Leaving ${streamPart} on Brubeck`)
-                //brubeckNode.unsubscribe(streamPart as StreamPartID)
-                console.log(`Leaving ${streamPart} on Tatum`)
-                tatumNode.leave(streamPart as StreamPartID)
+                console.log(`Leaving ${streamPart}`)
+                node.unsubscribe(streamPart as StreamPartID)
             }
         }
 
         // Subscribe to all subscriptions which are not subscribed but are in the target set
         for (const streamPart of targetSubscriptions) {
             if (!currentSubscriptions.has(streamPart)) {
-                console.log(`Joining ${streamPart} on Brubeck`)
-                /*await*/ brubeckNode.subscribeAndWaitForJoin(streamPart as StreamPartID)
-                //console.log(`Joining ${streamPart} on Tatum`)
-                ///*await*/ tatumNode.join(streamPart as StreamPartID)
+                console.log(`Joining ${streamPart}`)
+                node.subscribeAndWaitForJoin(streamPart as StreamPartID)
             }
         }
 
         currentSubscriptions = targetSubscriptions
+        if (socketConnected) {
+            const msg: MessageBetweenInstances = {
+                streamParts: Array.from(currentSubscriptions)
+            }
+            ipc.of[socketName].emit(
+                'message',
+                JSON.stringify(msg)
+            )
+        }
     }
 
     await updateSubscriptions()
+
     console.log('Setting interval')
     setInterval(updateSubscriptions, CHECK_INTERVAL)
 })()

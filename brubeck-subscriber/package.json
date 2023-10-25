@@ -1,0 +1,22 @@
+{
+  "name": "brubeck-subscriber",
+  "version": "0.0.1",
+  "description": "Subscribes to raw data from the Brubeck network and forwards them over a socket to the tatum-publisher",
+  "main": "brubeck-subscriber.ts",
+  "scripts": {
+    "start": "ts-node brubeck-subscriber.ts"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.8.8",
+    "@types/node-fetch": "^2.6.7",
+    "@types/node-ipc": "^9.2.2",
+    "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "node-ipc": "10.1.0",
+    "streamr-client": "^8.5.5"
+  }
+}
