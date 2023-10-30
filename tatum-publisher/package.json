@@ -4,7 +4,7 @@
   "description": "Reads raw data from the brubeck-subscriber and publishes them to the Streamr 1.0 network",
   "main": "tatum-publisher.ts",
   "scripts": {
-    "start": "ts-node tatum-subscriber.ts"
+    "start": "ts-node tatum-publisher.ts"
   },
   "author": "",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "ts-node": "^10.9.1"
   },
   "dependencies": {
+    "@streamr/utils": "^0.0.1-tatum.6",
     "node-ipc": "10.1.0",
     "streamr-client": "^0.0.1-tatum.6"
   }

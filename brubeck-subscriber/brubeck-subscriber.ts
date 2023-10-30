@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 import StreamrClient, { StreamMessage, StreamPartID } from 'streamr-client'
 import crypto from 'crypto'
 import ipc from 'node-ipc'
-import { MessageBetweenInstances, Message } from '../common/messageTypes'
+import { MessageBetweenInstances } from '../common/messageTypes'
 
 const BRIDGE_NODES = parseInt(process.env['BRIDGE_NODES'] || '10')
 const MY_INDEX = parseInt(process.env['BRIDGE_MY_INDEX'] || '0')
@@ -10,6 +10,7 @@ const CHECK_INTERVAL = parseInt(process.env['BRIDGE_TRACKER_INTERVAL'] || '15000
 
 ipc.config.id = `brubeck-${MY_INDEX}`
 ipc.config.retry = 1500
+ipc.config.silent = true
 
 const trackerUrls = [
     'https://brubeck3.streamr.network:30401',
@@ -35,13 +36,18 @@ const fetchTopologies = async (url: string): Promise<Topologies> => {
     return response.json()
 }
 
-const getStreamPartitions = async (): Promise<Set<string>> => {
+const getStreamPartitions = async (myNodeId: string): Promise<Set<string>> => {
     const topologiesFromEachTracker: Topologies[] = await Promise.all(trackerUrls.map(url => fetchTopologies(url)))
     const streamParts: Set<string> = new Set()
     
     for (const topologies of topologiesFromEachTracker) {
         for (const streamPart of Object.keys(topologies)) {
-            streamParts.add(streamPart)
+            // Don't add streamParts where I am the only participant
+            if (topologies[streamPart].length > 1 || topologies[streamPart][0] !== myNodeId) {
+                streamParts.add(streamPart)
+            } else {
+                console.log(`Skipping ${streamPart} because I'm the only one there`)
+            }
         }
     }
 
@@ -133,17 +139,15 @@ StreamMessage {
                 JSON.stringify(serialized)
             )
         }
-        console.log(msg)
     }
 
     node.addMessageListener(bridgeMessage)
 
-    // TODO: I will always be in the topology of each subscribed stream, so the set will never actually be reduced
     const updateSubscriptions = async () => {
-        console.log('Updating subscriptions')
-        const streamParts: Set<string> = await getStreamPartitions()
-        const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => streamPart.indexOf('swash') >= 0))
-        // const targetSubscriptions: Set<StreamPartition> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
+        console.log(`Updating subscriptions (my nodeId: ${node.getNodeId()})`)
+        const streamParts: Set<string> = await getStreamPartitions(node.getNodeId())
+        // const targetSubscriptions: Set<string> = new Set(['streamr.eth/metrics/nodes/firehose/sec#83'])
+        const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
 
         console.log(`Found ${streamParts.size} stream partitions total, assigned to me are ${targetSubscriptions.size}`)
         
@@ -159,7 +163,7 @@ StreamMessage {
         for (const streamPart of targetSubscriptions) {
             if (!currentSubscriptions.has(streamPart)) {
                 console.log(`Joining ${streamPart}`)
-                node.subscribeAndWaitForJoin(streamPart as StreamPartID)
+                node.subscribe(streamPart as StreamPartID)
             }
         }
 
