@@ -1,10 +1,10 @@
 import fetch from 'node-fetch'
-import StreamrClient, { StreamMessage, StreamPartID } from 'streamr-client'
+import StreamrClient, { EncryptionType, StreamMessage, StreamPartID } from 'streamr-client'
 import crypto from 'crypto'
 import ipc from 'node-ipc'
 import { MessageBetweenInstances } from '../common/messageTypes'
 
-const BRIDGE_NODES = parseInt(process.env['BRIDGE_NODES'] || '10')
+const BRIDGE_NODES = parseInt(process.env['BRIDGE_NODES'] || '1')
 const MY_INDEX = parseInt(process.env['BRIDGE_MY_INDEX'] || '0')
 const CHECK_INTERVAL = parseInt(process.env['BRIDGE_TRACKER_INTERVAL'] || '15000')
 
@@ -109,35 +109,38 @@ StreamMessage {
         }
     )
 
-    const bridgeMessage = async (msg: StreamMessage) => {
-        const serialized: MessageBetweenInstances = {
-            msg: {
-                messageId: {
-                    streamId: msg.messageId.streamId,
-                    streamPartition: msg.messageId.streamPartition,
-                    timestamp: msg.messageId.timestamp,
-                    sequenceNumber: msg.messageId.sequenceNumber,
-                    publisherId: msg.messageId.publisherId,
-                    msgChainId: msg.messageId.msgChainId,
-                },
-                prevMsgRef: msg.prevMsgRef ? { 
-                    timestamp: msg.prevMsgRef.timestamp, 
-                    sequenceNumber: msg.prevMsgRef.sequenceNumber,
-                } : null,
-                messageType: msg.messageType,
-                contentType: msg.contentType,
-                encryptionType: msg.encryptionType,
-                groupKeyId: msg.groupKeyId,
-                newGroupKey: msg.newGroupKey ? msg.newGroupKey.serialize() : null,
-                signature: msg.signature,
-                serializedContent: msg.serializedContent,                
+    const bridgeMessage = (msg: StreamMessage) => {
+        // Only bridge unencrypted messages for now
+        if (msg.encryptionType === EncryptionType.NONE) {
+            const serialized: MessageBetweenInstances = {
+                msg: {
+                    messageId: {
+                        streamId: msg.messageId.streamId,
+                        streamPartition: msg.messageId.streamPartition,
+                        timestamp: msg.messageId.timestamp,
+                        sequenceNumber: msg.messageId.sequenceNumber,
+                        publisherId: msg.messageId.publisherId,
+                        msgChainId: msg.messageId.msgChainId,
+                    },
+                    prevMsgRef: msg.prevMsgRef ? { 
+                        timestamp: msg.prevMsgRef.timestamp, 
+                        sequenceNumber: msg.prevMsgRef.sequenceNumber,
+                    } : null,
+                    messageType: msg.messageType,
+                    contentType: msg.contentType,
+                    encryptionType: msg.encryptionType,
+                    groupKeyId: msg.groupKeyId,
+                    newGroupKey: msg.newGroupKey ? msg.newGroupKey.serialize() : null,
+                    signature: msg.signature,
+                    serializedContent: msg.serializedContent,                
+                }
             }
-        }
-        if (socketConnected) {
-            ipc.of[socketName].emit(
-                'message',
-                JSON.stringify(serialized)
-            )
+            if (socketConnected) {
+                ipc.of[socketName].emit(
+                    'message',
+                    JSON.stringify(serialized)
+                )
+            }
         }
     }
 
@@ -145,8 +148,16 @@ StreamMessage {
 
     const updateSubscriptions = async () => {
         console.log(`Updating subscriptions (my nodeId: ${node.getNodeId()})`)
-        const streamParts: Set<string> = await getStreamPartitions(node.getNodeId())
-        // const targetSubscriptions: Set<string> = new Set(['streamr.eth/metrics/nodes/firehose/sec#83'])
+
+        let streamParts: Set<string> 
+        try {
+            streamParts = await getStreamPartitions(node.getNodeId())
+        } catch (err) {
+            console.log('Failed to update subscriptions', err)
+            return
+        }
+        
+        // const targetSubscriptions: Set<string> = new Set(['streamr.eth/metrics/nodes/firehose/sec#43'])
         const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
 
         console.log(`Found ${streamParts.size} stream partitions total, assigned to me are ${targetSubscriptions.size}`)
