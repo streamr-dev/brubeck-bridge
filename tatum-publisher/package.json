@@ -15,6 +15,6 @@
   "dependencies": {
     "@streamr/utils": "^0.0.1-tatum.6",
     "node-ipc": "10.1.0",
-    "streamr-client": "^100.0.0-pretestnet.4"
+    "streamr-client": "^100.0.0-testnet-one.0"
   }
 }
