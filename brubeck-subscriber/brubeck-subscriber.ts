@@ -157,8 +157,15 @@ StreamMessage {
             return
         }
         
-        // const targetSubscriptions: Set<string> = new Set(['streamr.eth/metrics/nodes/firehose/sec#43'])
-        const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
+        const targetSubscriptions: Set<string> = new Set([
+            'streams.dimo.eth/firehose/weather#0',
+            'streams.dimo.eth/firehose/weather#1',
+            'streams.dimo.eth/firehose/weather#2',
+            '0xbafb06e3d7546742c6b1f2945b74ce0b3edc201a/nodle#0',
+            '0xd37dc4d7e2c1bdf3edd89db0e505394ea69af43d/gas-station/polygon#0',
+            'eth-watch.eth/ethereum/blocks#0',
+        ])
+        // const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
 
         console.log(`Found ${streamParts.size} stream partitions total, assigned to me are ${targetSubscriptions.size}`)
         
