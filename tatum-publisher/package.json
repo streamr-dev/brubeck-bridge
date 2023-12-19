@@ -13,8 +13,8 @@
     "ts-node": "^10.9.1"
   },
   "dependencies": {
-    "@streamr/utils": "^100.0.0-testnet-one.1",
+    "@streamr/utils": "^100.0.0-testnet-two.1",
     "node-ipc": "10.1.0",
-    "streamr-client": "^100.0.0-testnet-one.1"
+    "streamr-client": "^100.0.0-testnet-two.1"
   }
 }

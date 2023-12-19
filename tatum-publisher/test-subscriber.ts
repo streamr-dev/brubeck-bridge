@@ -1,11 +1,10 @@
 import StreamrClient from 'streamr-client'
-import { TATUM_CLIENT_OPTIONS } from './tatum-client-options'
 
-const streamr = new StreamrClient(TATUM_CLIENT_OPTIONS)
+const streamr = new StreamrClient()
 
 streamr.subscribe({
-    streamId: 'streamr.eth/metrics/nodes/firehose/sec',
-    partition: 43
+    streamId: 'eth-watch.eth/ethereum/blocks',
+    partition: 0
 }, (msg) => {
     console.log(msg)
 })
