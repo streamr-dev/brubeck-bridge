@@ -164,7 +164,8 @@ StreamMessage {
             '0xbafb06e3d7546742c6b1f2945b74ce0b3edc201a/nodle#0',
             '0xd37dc4d7e2c1bdf3edd89db0e505394ea69af43d/gas-station/polygon#0',
             'eth-watch.eth/ethereum/blocks#0',
-            '0x7277c78c02a4192ef8c48f5f4c529278d0e447fc/kyve/kyve-1/0#0'
+            '0x7277c78c02a4192ef8c48f5f4c529278d0e447fc/kyve/kyve-1/0#0',
+            'streamr.eth/demos/helsinki-trams',
         ])
         // const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
 
