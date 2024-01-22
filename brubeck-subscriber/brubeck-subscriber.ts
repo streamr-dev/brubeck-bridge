@@ -157,6 +157,7 @@ StreamMessage {
             return
         }
         
+        // const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
         const targetSubscriptions: Set<string> = new Set([
             'streams.dimo.eth/firehose/weather#0',
             'streams.dimo.eth/firehose/weather#1',
@@ -165,8 +166,17 @@ StreamMessage {
             '0xd37dc4d7e2c1bdf3edd89db0e505394ea69af43d/gas-station/polygon#0',
             'eth-watch.eth/ethereum/blocks#0',
             '0x7277c78c02a4192ef8c48f5f4c529278d0e447fc/kyve/kyve-1/0#0',
+            'binance-streamr.eth/DATAUSDT/ticker#0',
+            'binance-streamr.eth/DATAUSDT/trades#0',
+            '0xBa24aFB019D768263edD606a9Fd10D3d0806E039/redstone-oracle-node/0x8BB8F32Df04c8b654987DAaeD53D6B6091e3B774/data-packages#0',
+            '0x65684fcb6f470bf2eea3949cdd771b45f601481b/redstone-oracle-node/0xdEB22f54738d54976C4c0fe5ce6d408E40d88499/data-packages#0',
+            '0x6425466cBB7Cd64F3F2AD3b65aB0D0b5471A5483/redstone-oracle-node/0x51Ce04Be4b3E32572C4Ec9135221d0691Ba7d202/data-packages#0',
+            '0x8a0108B1c5B646f71BB679Bc2E18f83df2D65cfd/redstone-oracle-node/0xDD682daEC5A90dD295d14DA4b0bec9281017b5bE/data-packages#0',
+            '0x871221720E3965773bEBAf157E204Ab22c9BE309/redstone-oracle-node/0x9c5AE89C4Af6aA32cE58588DBaF90d18a855B6de/data-packages#0',
         ])
-        // const targetSubscriptions: Set<string> = new Set(Array.from(streamParts).filter(streamPart => hash(streamPart) % BRIDGE_NODES == MY_INDEX))
+        for (let partition=0; partition<50; partition++) {
+            targetSubscriptions.add(`eth-watch.eth/ethereum/events#${partition}`)
+        }
 
         console.log(`Found ${streamParts.size} stream partitions total, assigned to me are ${targetSubscriptions.size}`)
         

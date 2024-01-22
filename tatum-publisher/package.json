@@ -13,9 +13,9 @@
     "ts-node": "^10.9.1"
   },
   "dependencies": {
-    "@streamr/protocol": "^100.0.0-testnet-two.3",
-    "@streamr/utils": "^100.0.0-testnet-two.3",
+    "@streamr/protocol": "^100.0.0-testnet-two.4",
+    "@streamr/utils": "^100.0.0-testnet-two.4",
     "node-ipc": "10.1.0",
-    "streamr-client": "^100.0.0-testnet-two.3"
+    "streamr-client": "^100.0.0-testnet-two.4"
   }
 }
