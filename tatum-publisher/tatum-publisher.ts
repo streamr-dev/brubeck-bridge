@@ -1,5 +1,5 @@
 import StreamrClient, { EthereumAddress, StreamPartID, StreamID } from 'streamr-client'
-import { StreamMessage, MessageID, MessageRef, EncryptedGroupKey } from '@streamr/protocol'
+import { StreamMessage, MessageID, MessageRef, EncryptedGroupKey, SignatureType } from '@streamr/protocol'
 import { hexToBinary } from '@streamr/utils'
 import ipc from 'node-ipc'
 import { MessageBetweenInstances } from '../common/messageTypes'
@@ -45,7 +45,7 @@ ipc.config.silent = true
         function() {
             ipc.server.on(
                 'message',
-                function(data) {
+                async function(data) {
                     const msgFromBrubeck: MessageBetweenInstances = JSON.parse(data)
                     if (msgFromBrubeck.msg) {
                         let parsedNewGroupKey: [string, string] | null = null
@@ -65,17 +65,18 @@ ipc.config.silent = true
                             prevMsgRef: msgFromBrubeck.msg.prevMsgRef ? new MessageRef( 
                                 msgFromBrubeck.msg.prevMsgRef.timestamp, 
                                 msgFromBrubeck.msg.prevMsgRef.sequenceNumber,
-                            ) : null,
+                            ) : undefined,
                             messageType: msgFromBrubeck.msg.messageType,
                             contentType: msgFromBrubeck.msg.contentType,
                             encryptionType: msgFromBrubeck.msg.encryptionType,
-                            groupKeyId: msgFromBrubeck.msg.groupKeyId,
-                            newGroupKey: parsedNewGroupKey ? new EncryptedGroupKey(parsedNewGroupKey[0], Buffer.from(parsedNewGroupKey[1], 'hex')) : null,
+                            groupKeyId: msgFromBrubeck.msg.groupKeyId || undefined,
+                            newGroupKey: parsedNewGroupKey ? new EncryptedGroupKey(parsedNewGroupKey[0], Buffer.from(parsedNewGroupKey[1], 'hex')) : undefined,
                             signature: hexToBinary(msgFromBrubeck.msg.signature),
+                            signatureType: SignatureType.LEGACY_SECP256K1,
                             content: msgFromBrubeck.msg.encryptionType === 0 ? 
                                 Buffer.from(msgFromBrubeck.msg.serializedContent, 'utf8') : Buffer.from(msgFromBrubeck.msg.serializedContent, 'hex')
                         })
-                        node.broadcast(message)
+                        await node.broadcast(message)
                         // console.log(msgFromBrubeck.msg)
                     } else if (msgFromBrubeck.streamParts) {
                         updateSubscriptions(new Set<string>(msgFromBrubeck.streamParts))
