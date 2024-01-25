@@ -179,7 +179,7 @@ StreamMessage {
             '0x8a0108b1c5b646f71bb679bc2e18f83df2d65cfd/redstone-oracle-node/0xDD682daEC5A90dD295d14DA4b0bec9281017b5bE/data-packages#0',
             '0x871221720e3965773bebaf157e204ab22c9be309/redstone-oracle-node/0x9c5AE89C4Af6aA32cE58588DBaF90d18a855B6de/data-packages#0',
         ])
-        for (let partition=0; partition<50; partition++) {
+        for (let partition=0; partition<5; partition++) {
             targetSubscriptions.add(`eth-watch.eth/ethereum/events#${partition}`)
         }
 
