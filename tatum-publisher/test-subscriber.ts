@@ -1,4 +1,4 @@
-import StreamrClient from 'streamr-client'
+import StreamrClient from '@streamr/sdk'
 
 const streamr = new StreamrClient()
 

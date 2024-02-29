@@ -1,4 +1,4 @@
-import StreamrClient, { EthereumAddress, StreamPartID, StreamID } from 'streamr-client'
+import StreamrClient, { EthereumAddress, StreamPartID, StreamID } from '@streamr/sdk'
 import { StreamMessage, MessageID, MessageRef, EncryptedGroupKey, SignatureType } from '@streamr/protocol'
 import { hexToBinary } from '@streamr/utils'
 import ipc from 'node-ipc'
