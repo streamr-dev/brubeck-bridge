@@ -13,9 +13,9 @@
     "ts-node": "^10.9.1"
   },
   "dependencies": {
-    "@streamr/protocol": "^100.0.0-rc.1",
-    "@streamr/sdk": "^100.0.0-rc.1",
-    "@streamr/utils": "^100.0.0-rc.1",
+    "@streamr/protocol": "latest",
+    "@streamr/sdk": "latest",
+    "@streamr/utils": "latest",
     "node-ipc": "10.1.0"
   }
 }
